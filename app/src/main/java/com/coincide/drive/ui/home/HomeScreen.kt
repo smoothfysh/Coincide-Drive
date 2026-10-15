@@ -12,11 +12,12 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -30,7 +31,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.CheckCircle
@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.Cloud
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Shield
@@ -67,26 +66,40 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.coincide.drive.R
+import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.coincide.drive.data.entity.SyncLogEntity
 import com.coincide.drive.data.entity.SyncPairEntity
 import com.coincide.drive.data.preferences.SyncPreferences
-import com.coincide.drive.ui.theme.DriveGoogleBlue
-import com.coincide.drive.ui.theme.DriveSuccessGreen
-import com.coincide.drive.ui.theme.PillShape
-import com.coincide.drive.ui.theme.TonalCardShape
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+
+// Custom Light Mode Design Palette matching UI specification
+private val BgCanvas = Color(0xFFF4F8FC)
+private val TextHeadline = Color(0xFF101D38)
+private val TextMuted = Color(0xFF6B7280)
+private val CardBorderColor = Color(0xFFE8EEF5)
+private val CardInnerItemBg = Color(0xFFF1F5FA)
+private val RoyalBlue = Color(0xFF1A68D9)
+private val DriveCloudBlue = Color(0xFF1A73E8)
+private val SuccessGreen = Color(0xFF16A34A)
+private val SuccessGreenBg = Color(0xFFD4F5E1)
+private val SuccessGreenText = Color(0xFF15803D)
+private val ConflictGreenText = Color(0xFF166534)
+private val ConflictBadgeBg = Color(0xFFE6F8EE)
+private val ConstraintPillBg = Color(0xFFEEF6FF)
+private val HeroGradientStart = Color(0xFFEBF5FE)
+private val HeroGradientEnd = Color(0xFFE2EFFF)
+private val HeroBorder = Color(0xFFD4E6FA)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -133,39 +146,30 @@ fun HomeScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        containerColor = BgCanvas,
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.ic_app_logo),
-                            contentDescription = "App Logo",
-                            modifier = Modifier
-                                .size(34.dp)
-                                .clip(CircleShape)
+                    Text(
+                        text = "Coincide Drive",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextHeadline
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "Coincide Drive",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    )
                 },
                 actions = {
                     IconButton(onClick = onNavigateToSettings) {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Sync Settings",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = TextHeadline
                         )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = BgCanvas
                 )
             )
         }
@@ -175,16 +179,24 @@ fun HomeScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // 1. Hero Sync Status & Immediate Action Card
             Card(
-                shape = TonalCardShape,
+                shape = RoundedCornerShape(22.dp),
+                border = BorderStroke(1.dp, HeroBorder),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                    containerColor = Color.Transparent
                 ),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(HeroGradientStart, HeroGradientEnd)
+                        ),
+                        shape = RoundedCornerShape(22.dp)
+                    )
             ) {
                 Column(
                     modifier = Modifier
@@ -197,8 +209,8 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Surface(
-                            shape = PillShape,
-                            color = if (isSyncing) DriveGoogleBlue.copy(alpha = 0.18f) else DriveSuccessGreen.copy(alpha = 0.18f)
+                            shape = RoundedCornerShape(50),
+                            color = if (isSyncing) Color(0xFFDCEBFE) else SuccessGreenBg
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -206,30 +218,31 @@ fun HomeScreen(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(8.dp)
+                                        .size(7.dp)
                                         .background(
-                                            if (isSyncing) DriveGoogleBlue else DriveSuccessGreen,
+                                            if (isSyncing) RoyalBlue else SuccessGreen,
                                             shape = CircleShape
                                         )
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = if (isSyncing) "Syncing changes..." else "Active & Watching",
-                                    style = MaterialTheme.typography.labelSmall,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isSyncing) DriveGoogleBlue else DriveSuccessGreen
+                                    color = if (isSyncing) RoyalBlue else SuccessGreenText
                                 )
                             }
                         }
 
                         Text(
                             text = "WorkManager",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = Color(0xFF7B8798)
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -239,36 +252,41 @@ fun HomeScreen(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "Last Synchronized",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                fontSize = 13.sp,
+                                color = TextMuted
                             )
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = lastSyncFormatted,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 19.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextHeadline
                             )
                         }
 
                         Button(
                             onClick = onSyncNow,
                             enabled = !isSyncing,
-                            shape = PillShape,
+                            shape = RoundedCornerShape(50),
+                            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 11.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
+                                containerColor = RoyalBlue
                             )
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Sync,
                                 contentDescription = null,
+                                tint = Color.White,
                                 modifier = Modifier
-                                    .size(18.dp)
+                                    .size(17.dp)
                                     .then(if (isSyncing) Modifier.rotate(spinAngle) else Modifier)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = if (isSyncing) "Syncing..." else "Sync Now",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
                             )
                         }
                     }
@@ -278,9 +296,10 @@ fun HomeScreen(
             // 2. Active Sync Pair Card
             if (syncPair != null) {
                 Card(
-                    shape = TonalCardShape,
+                    shape = RoundedCornerShape(22.dp),
+                    border = BorderStroke(1.dp, CardBorderColor),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        containerColor = Color.White
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -298,14 +317,15 @@ fun HomeScreen(
                                 Icon(
                                     imageVector = Icons.Default.SyncAlt,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(22.dp)
+                                    tint = TextHeadline,
+                                    modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Active Sync Pair",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextHeadline
                                 )
                             }
 
@@ -316,7 +336,7 @@ fun HomeScreen(
                                 Icon(
                                     imageVector = Icons.Default.Edit,
                                     contentDescription = "Edit Folder Pair",
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = TextHeadline,
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -324,67 +344,71 @@ fun HomeScreen(
 
                         Spacer(modifier = Modifier.height(14.dp))
 
-                        // Remote Drive Folder
+                        // Remote Drive Folder Item
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surface,
+                            shape = RoundedCornerShape(14.dp),
+                            color = CardInnerItemBg,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(12.dp)
+                                modifier = Modifier.padding(14.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Cloud,
                                     contentDescription = null,
-                                    tint = DriveGoogleBlue,
+                                    tint = DriveCloudBlue,
                                     modifier = Modifier.size(24.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
                                         text = syncPair.remoteFolderName,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold
+                                        fontSize = 15.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = TextHeadline
                                     )
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = syncPair.accountEmail,
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        fontSize = 13.sp,
+                                        color = TextMuted
                                     )
                                 }
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
 
-                        // Local SAF Folder
+                        // Local SAF Folder Item
                         Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surface,
+                            shape = RoundedCornerShape(14.dp),
+                            color = CardInnerItemBg,
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(12.dp)
+                                modifier = Modifier.padding(14.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Folder,
                                     contentDescription = null,
-                                    tint = DriveSuccessGreen,
+                                    tint = SuccessGreen,
                                     modifier = Modifier.size(24.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
                                         text = syncPair.localDisplayPath,
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = FontWeight.SemiBold
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = TextHeadline
                                     )
+                                    Spacer(modifier = Modifier.height(2.dp))
                                     Text(
                                         text = "Local Storage (SAF Authorized)",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        fontSize = 13.sp,
+                                        color = TextMuted
                                     )
                                 }
                             }
@@ -394,24 +418,25 @@ fun HomeScreen(
 
                         // Conflict protection tag
                         Surface(
-                            shape = PillShape,
-                            color = MaterialTheme.colorScheme.surfaceContainerHigh
+                            shape = RoundedCornerShape(50),
+                            color = ConflictBadgeBg
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Shield,
                                     contentDescription = null,
-                                    tint = DriveSuccessGreen,
+                                    tint = SuccessGreen,
                                     modifier = Modifier.size(14.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = "Conflict Protection: Keep Both (Timestamp suffix)",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Medium
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = ConflictGreenText
                                 )
                             }
                         }
@@ -420,9 +445,10 @@ fun HomeScreen(
             } else {
                 // Empty state if no sync pair configured
                 Card(
-                    shape = TonalCardShape,
+                    shape = RoundedCornerShape(22.dp),
+                    border = BorderStroke(1.dp, CardBorderColor),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceContainer
+                        containerColor = Color.White
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -434,21 +460,23 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = "No Sync Pair Configured",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextHeadline
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
                             text = "Link a Google Drive folder with a local device folder to start 2-way syncing.",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontSize = 14.sp,
+                            color = TextMuted
                         )
                         Spacer(modifier = Modifier.height(14.dp))
                         Button(
                             onClick = onNavigateToSetup,
-                            shape = PillShape
+                            shape = RoundedCornerShape(50),
+                            colors = ButtonDefaults.buttonColors(containerColor = RoyalBlue)
                         ) {
-                            Text("Setup Sync Pair")
+                            Text("Setup Sync Pair", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -456,9 +484,10 @@ fun HomeScreen(
 
             // 3. Execution Constraints Summary Card
             Card(
-                shape = TonalCardShape,
+                shape = RoundedCornerShape(22.dp),
+                border = BorderStroke(1.dp, CardBorderColor),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    containerColor = Color.White
                 ),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -474,66 +503,74 @@ fun HomeScreen(
                     ) {
                         Text(
                             text = "Active Constraints",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextHeadline
                         )
 
                         OutlinedButton(
                             onClick = onNavigateToSettings,
-                            shape = PillShape
+                            shape = RoundedCornerShape(50),
+                            border = BorderStroke(1.dp, Color(0xFFB0BAC9)),
+                            colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)
                         ) {
-                            Text("Configure", style = MaterialTheme.typography.labelMedium)
+                            Text("Configure", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextHeadline)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Surface(
-                            shape = PillShape,
-                            color = MaterialTheme.colorScheme.surface,
+                            shape = RoundedCornerShape(50),
+                            color = ConstraintPillBg,
                             modifier = Modifier.weight(1f)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Wifi,
                                     contentDescription = null,
-                                    tint = if (preferences.wifiOnly) DriveGoogleBlue else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    tint = RoyalBlue,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = if (preferences.wifiOnly) "Wi-Fi Only" else "Mobile Data OK",
-                                    style = MaterialTheme.typography.labelSmall
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF1E293B)
                                 )
                             }
                         }
 
                         Surface(
-                            shape = PillShape,
-                            color = MaterialTheme.colorScheme.surface,
+                            shape = RoundedCornerShape(50),
+                            color = ConstraintPillBg,
                             modifier = Modifier.weight(1f)
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Schedule,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
+                                    tint = RoyalBlue,
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
                                     text = if (preferences.syncIntervalMinutes > 0) "${preferences.syncIntervalMinutes}m interval" else "Manual only",
-                                    style = MaterialTheme.typography.labelSmall
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF1E293B)
                                 )
                             }
                         }
@@ -543,13 +580,10 @@ fun HomeScreen(
 
             // 4. Background Execution & Battery Optimization Card
             Card(
-                shape = TonalCardShape,
+                shape = RoundedCornerShape(22.dp),
+                border = BorderStroke(1.dp, CardBorderColor),
                 colors = CardDefaults.cardColors(
-                    containerColor = if (isIgnoringBatteryOptimizations) {
-                        MaterialTheme.colorScheme.surfaceContainer
-                    } else {
-                        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)
-                    }
+                    containerColor = Color.White
                 ),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -567,27 +601,28 @@ fun HomeScreen(
                             Icon(
                                 imageVector = if (isIgnoringBatteryOptimizations) Icons.Default.BatteryChargingFull else Icons.Default.BatteryAlert,
                                 contentDescription = null,
-                                tint = if (isIgnoringBatteryOptimizations) DriveSuccessGreen else MaterialTheme.colorScheme.error,
+                                tint = if (isIgnoringBatteryOptimizations) SuccessGreen else Color(0xFFDC2626),
                                 modifier = Modifier.size(22.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Background Execution",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextHeadline
                             )
                         }
 
                         Surface(
-                            shape = PillShape,
-                            color = if (isIgnoringBatteryOptimizations) DriveSuccessGreen.copy(alpha = 0.15f) else MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
+                            shape = RoundedCornerShape(50),
+                            color = if (isIgnoringBatteryOptimizations) SuccessGreenBg else Color(0xFFFEE2E2)
                         ) {
                             Text(
                                 text = if (isIgnoringBatteryOptimizations) "Unrestricted" else "Battery Optimized",
-                                style = MaterialTheme.typography.labelSmall,
+                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isIgnoringBatteryOptimizations) DriveSuccessGreen else MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                color = if (isIgnoringBatteryOptimizations) ConflictGreenText else Color(0xFFDC2626),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                             )
                         }
                     }
@@ -600,8 +635,9 @@ fun HomeScreen(
                         } else {
                             "Android battery saver is currently active for this app. The system may delay or cancel background sync when the app is closed. Tap below to prevent Android from killing the background sync."
                         },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontSize = 13.sp,
+                        color = Color(0xFF4B5563),
+                        lineHeight = 18.sp
                     )
 
                     if (!isIgnoringBatteryOptimizations) {
@@ -622,15 +658,16 @@ fun HomeScreen(
                                     }
                                 }
                             },
-                            shape = PillShape,
+                            shape = RoundedCornerShape(50),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
+                                containerColor = RoyalBlue
                             )
                         ) {
                             Text(
                                 text = "Allow Unrestricted Background Sync",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
                             )
                         }
                     }
@@ -639,9 +676,10 @@ fun HomeScreen(
 
             // 5. Recent Activity Log Card
             Card(
-                shape = TonalCardShape,
+                shape = RoundedCornerShape(22.dp),
+                border = BorderStroke(1.dp, CardBorderColor),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                    containerColor = Color.White
                 ),
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -652,17 +690,18 @@ fun HomeScreen(
                 ) {
                     Text(
                         text = "Recent Sync History",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextHeadline
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(14.dp))
 
                     if (recentLogs.isEmpty()) {
                         Text(
                             text = "No sync runs recorded yet. Click 'Sync Now' above to test.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            fontSize = 13.sp,
+                            color = TextMuted
                         )
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -671,14 +710,14 @@ fun HomeScreen(
                                     .format(Date(log.timestamp))
 
                                 Surface(
-                                    shape = RoundedCornerShape(10.dp),
-                                    color = MaterialTheme.colorScheme.surface,
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = CardInnerItemBg,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
-                                            .padding(10.dp),
+                                            .padding(horizontal = 14.dp, vertical = 12.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
@@ -686,28 +725,30 @@ fun HomeScreen(
                                             Icon(
                                                 imageVector = if (log.status == SyncLogEntity.STATUS_SUCCESS) Icons.Default.CheckCircle else Icons.Default.Error,
                                                 contentDescription = null,
-                                                tint = if (log.status == SyncLogEntity.STATUS_SUCCESS) DriveSuccessGreen else MaterialTheme.colorScheme.error,
-                                                modifier = Modifier.size(18.dp)
+                                                tint = if (log.status == SyncLogEntity.STATUS_SUCCESS) SuccessGreen else Color(0xFFDC2626),
+                                                modifier = Modifier.size(20.dp)
                                             )
-                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Spacer(modifier = Modifier.width(10.dp))
                                             Column {
                                                 Text(
                                                     text = dateStr,
-                                                    style = MaterialTheme.typography.labelMedium,
-                                                    fontWeight = FontWeight.SemiBold
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = TextHeadline
                                                 )
+                                                Spacer(modifier = Modifier.height(2.dp))
                                                 Text(
                                                     text = "Up: ${log.filesUploaded} | Down: ${log.filesDownloaded} | Conflicts: ${log.conflictsResolved}",
-                                                    style = MaterialTheme.typography.labelSmall,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    fontSize = 12.sp,
+                                                    color = TextMuted
                                                 )
                                             }
                                         }
 
                                         Text(
                                             text = "${log.durationMs}ms",
-                                            style = MaterialTheme.typography.labelSmall,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            fontSize = 12.sp,
+                                            color = TextMuted
                                         )
                                     }
                                 }

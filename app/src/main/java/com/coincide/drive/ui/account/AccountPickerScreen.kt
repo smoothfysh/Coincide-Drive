@@ -52,6 +52,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.coincide.drive.ui.theme.CoincideDriveTheme
 import com.coincide.drive.ui.theme.DriveGoogleBlue
 import com.coincide.drive.ui.theme.DriveSuccessGreen
@@ -100,32 +101,24 @@ fun AccountPickerScreen(
 ) {
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        containerColor = Color(0xFFF4F8FC),
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        androidx.compose.foundation.Image(
-                            painter = androidx.compose.ui.res.painterResource(id = com.coincide.drive.R.drawable.ic_app_logo),
-                            contentDescription = "Coincide Drive Logo",
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
+                    Text(
+                        text = "Coincide Drive",
+                        style = MaterialTheme.typography.headlineMedium.copy(
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF101D38)
                         )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "Coincide Drive",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    )
                 },
                 actions = {
                     Surface(
                         shape = PillShape,
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        color = Color.White,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5EBF4)),
                         modifier = Modifier.padding(end = 12.dp)
                     ) {
                         Row(
@@ -148,15 +141,15 @@ fun AccountPickerScreen(
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = Color(0xFFF4F8FC)
                 )
             )
         },
         bottomBar = {
             Surface(
-                tonalElevation = 8.dp,
-                shadowElevation = 8.dp,
-                color = MaterialTheme.colorScheme.surface
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
+                color = Color(0xFFF4F8FC)
             ) {
                 Box(
                     modifier = Modifier

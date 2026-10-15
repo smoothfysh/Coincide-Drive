@@ -61,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -135,6 +136,7 @@ fun FolderBrowserScreen(
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
+        containerColor = Color(0xFFF4F8FC),
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -142,12 +144,13 @@ fun FolderBrowserScreen(
                         Text(
                             text = "Folder Mapping",
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF101D38)
                         )
                         Text(
                             text = "Step 2 of 3: Sync Pair Setup",
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.primary
+                            color = Color(0xFF1A68D9)
                         )
                     }
                 },
@@ -155,20 +158,21 @@ fun FolderBrowserScreen(
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = "Back",
+                            tint = Color(0xFF101D38)
                         )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface
+                    containerColor = Color(0xFFF4F8FC)
                 )
             )
         },
         bottomBar = {
             Surface(
-                tonalElevation = 8.dp,
-                shadowElevation = 8.dp,
-                color = MaterialTheme.colorScheme.surface
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
+                color = Color(0xFFF4F8FC)
             ) {
                 Box(
                     modifier = Modifier

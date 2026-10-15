@@ -193,7 +193,7 @@ fun AccountPickerScreen(
         ) {
             // Step Subtitle
             Text(
-                text = "Step 1 of 3: Active Account",
+                text = "Step 1 of 3: Connect Account",
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold
@@ -262,7 +262,7 @@ private fun ActiveAccountCard(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Authenticate via Google Play Services",
+                            text = "Sign in using your Google account on this phone",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -349,7 +349,7 @@ private fun ActiveAccountCard(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Google Play Services Verified",
+                                text = "Signed in securely with Google",
                                 style = MaterialTheme.typography.labelSmall,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -463,7 +463,7 @@ private fun PermissionsChecklistCard(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                text = "Sync Authorization Checklist",
+                text = "Connection Checklist",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -471,26 +471,26 @@ private fun PermissionsChecklistCard(
             // Permission item: Google Drive API
             PermissionChecklistItem(
                 icon = Icons.Outlined.Cloud,
-                title = "Google Drive Access",
-                description = "Scope: auth/drive.file (App-managed folder access)",
+                title = "Google Drive Connected",
+                description = "Allows the app to upload and download your files",
                 isGranted = uiState.isDriveApiGranted
             )
 
-            // Permission item: Background WorkManager
+            // Permission item: Background Sync
             PermissionChecklistItem(
                 icon = Icons.Default.CloudSync,
-                title = "WorkManager Background Sync",
-                description = "Battery-efficient background delta synchronization",
+                title = "Automatic Background Sync",
+                description = "Keeps your files up to date automatically when your phone is idle",
                 isGranted = uiState.isBackgroundSyncConfigured
             )
 
-            // Permission item: SAF Local Storage
+            // Permission item: Local Storage Access
             PermissionChecklistItem(
                 icon = Icons.Default.FolderShared,
-                title = "Local Storage Access Framework (SAF)",
-                description = "Persistable tree uri permissions for external app access",
+                title = "Phone Storage Access",
+                description = "Allows other apps (like Obsidian or Notes) to open and edit your files",
                 isGranted = uiState.isSafPermissionGranted,
-                customStatusText = if (uiState.isSafPermissionGranted) "Configured" else "Ready to Select"
+                customStatusText = if (uiState.isSafPermissionGranted) "Connected" else "Set up in Step 2"
             )
         }
     }

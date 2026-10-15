@@ -57,6 +57,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -80,6 +81,7 @@ import com.coincide.drive.data.entity.SyncLogEntity
 import com.coincide.drive.data.entity.SyncPairEntity
 import com.coincide.drive.data.preferences.SyncPreferences
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -119,6 +121,7 @@ fun HomeScreen(
     var isIgnoringBatteryOptimizations by remember {
         mutableStateOf(powerManager?.isIgnoringBatteryOptimizations(context.packageName) ?: false)
     }
+    var showAllHistory by remember { mutableStateOf(false) }
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -235,7 +238,7 @@ fun HomeScreen(
                         }
 
                         Text(
-                            text = "WorkManager",
+                            text = "Automatic Sync",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Normal,
                             color = Color(0xFF7B8798)
@@ -406,7 +409,7 @@ fun HomeScreen(
                                     )
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Local Storage (SAF Authorized)",
+                                        text = "Phone Storage (Connected)",
                                         fontSize = 13.sp,
                                         color = TextMuted
                                     )
@@ -433,7 +436,7 @@ fun HomeScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = "Conflict Protection: Keep Both (Timestamp suffix)",
+                                    text = "Conflict Protection: Keep both copies safely",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = ConflictGreenText
@@ -502,7 +505,7 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(
-                            text = "Active Constraints",
+                            text = "Sync Conditions",
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextHeadline
@@ -567,7 +570,7 @@ fun HomeScreen(
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
                                 Text(
-                                    text = if (preferences.syncIntervalMinutes > 0) "${preferences.syncIntervalMinutes}m interval" else "Manual only",
+                                    text = if (preferences.syncIntervalMinutes > 0) "Every ${preferences.syncIntervalMinutes} min" else "Manual only",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = Color(0xFF1E293B)
@@ -578,7 +581,7 @@ fun HomeScreen(
                 }
             }
 
-            // 4. Background Execution & Battery Optimization Card
+            // 4. Background Sync & Battery Optimization Card
             Card(
                 shape = RoundedCornerShape(22.dp),
                 border = BorderStroke(1.dp, CardBorderColor),
@@ -606,7 +609,7 @@ fun HomeScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Background Execution",
+                                text = "Background Sync",
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextHeadline
@@ -618,7 +621,7 @@ fun HomeScreen(
                             color = if (isIgnoringBatteryOptimizations) SuccessGreenBg else Color(0xFFFEE2E2)
                         ) {
                             Text(
-                                text = if (isIgnoringBatteryOptimizations) "Unrestricted" else "Battery Optimized",
+                                text = if (isIgnoringBatteryOptimizations) "Allowed" else "Restricted",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isIgnoringBatteryOptimizations) ConflictGreenText else Color(0xFFDC2626),
@@ -631,9 +634,9 @@ fun HomeScreen(
 
                     Text(
                         text = if (isIgnoringBatteryOptimizations) {
-                            "Unrestricted battery permission is active. Android will not kill or throttle your background sync schedule when the app is closed or screen is off."
+                            "Background sync is allowed. Files will sync automatically on schedule even when the app is closed."
                         } else {
-                            "Android battery saver is currently active for this app. The system may delay or cancel background sync when the app is closed. Tap below to prevent Android from killing the background sync."
+                            "Battery saver may pause background syncing when the app is closed. Tap below to allow syncing seamlessly in the background."
                         },
                         fontSize = 13.sp,
                         color = Color(0xFF4B5563),
@@ -664,7 +667,7 @@ fun HomeScreen(
                             )
                         ) {
                             Text(
-                                text = "Allow Unrestricted Background Sync",
+                                text = "Allow Background Syncing",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -688,12 +691,31 @@ fun HomeScreen(
                         .fillMaxWidth()
                         .padding(18.dp)
                 ) {
-                    Text(
-                        text = "Recent Sync History",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextHeadline
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "Recent Sync History",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextHeadline
+                        )
+                        if (recentLogs.size > 5) {
+                            TextButton(
+                                onClick = { showAllHistory = !showAllHistory },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = if (showAllHistory) "Show less" else "Show all (${recentLogs.size})",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = RoyalBlue
+                                )
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(14.dp))
 
@@ -704,10 +726,12 @@ fun HomeScreen(
                             color = TextMuted
                         )
                     } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            recentLogs.take(5).forEach { log ->
-                                val dateStr = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
-                                    .format(Date(log.timestamp))
+                        val displayedLogs = if (showAllHistory) recentLogs else recentLogs.take(5)
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            displayedLogs.forEach { log ->
+                                val dateStr = formatFriendlySyncTime(log.timestamp)
+                                val isSuccess = log.status == SyncLogEntity.STATUS_SUCCESS
+                                val folderName = syncPair?.remoteFolderName ?: "Sync Folder"
 
                                 Surface(
                                     shape = RoundedCornerShape(14.dp),
@@ -721,35 +745,83 @@ fun HomeScreen(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                imageVector = if (log.status == SyncLogEntity.STATUS_SUCCESS) Icons.Default.CheckCircle else Icons.Default.Error,
-                                                contentDescription = null,
-                                                tint = if (log.status == SyncLogEntity.STATUS_SUCCESS) SuccessGreen else Color(0xFFDC2626),
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                            Spacer(modifier = Modifier.width(10.dp))
-                                            Column {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = if (isSuccess) SuccessGreenBg else Color(0xFFFEE2E2),
+                                                modifier = Modifier.size(34.dp)
+                                            ) {
+                                                Box(contentAlignment = Alignment.Center) {
+                                                    Icon(
+                                                        imageVector = if (isSuccess) Icons.Default.CheckCircle else Icons.Default.Error,
+                                                        contentDescription = null,
+                                                        tint = if (isSuccess) SuccessGreen else Color(0xFFDC2626),
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                }
+                                            }
+
+                                            Spacer(modifier = Modifier.width(12.dp))
+
+                                            Column(modifier = Modifier.weight(1f)) {
                                                 Text(
-                                                    text = dateStr,
+                                                    text = folderName,
                                                     fontSize = 14.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = TextHeadline
                                                 )
                                                 Spacer(modifier = Modifier.height(2.dp))
-                                                Text(
-                                                    text = "Up: ${log.filesUploaded} | Down: ${log.filesDownloaded} | Conflicts: ${log.conflictsResolved}",
-                                                    fontSize = 12.sp,
-                                                    color = TextMuted
-                                                )
+                                                if (isSuccess) {
+                                                    val changeCount = log.filesUploaded + log.filesDownloaded
+                                                    val subtext = if (changeCount > 0) {
+                                                        "$changeCount files updated • In sync"
+                                                    } else {
+                                                        "All files up to date"
+                                                    }
+                                                    Text(
+                                                        text = subtext,
+                                                        fontSize = 12.sp,
+                                                        color = TextMuted
+                                                    )
+                                                } else {
+                                                    Text(
+                                                        text = log.errorMessage ?: "Sync incomplete • Will retry",
+                                                        fontSize = 12.sp,
+                                                        color = Color(0xFFDC2626),
+                                                        maxLines = 2
+                                                    )
+                                                }
                                             }
                                         }
 
-                                        Text(
-                                            text = "${log.durationMs}ms",
-                                            fontSize = 12.sp,
-                                            color = TextMuted
-                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+
+                                        Column(
+                                            horizontalAlignment = Alignment.End
+                                        ) {
+                                            Text(
+                                                text = dateStr,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = TextHeadline
+                                            )
+                                            Spacer(modifier = Modifier.height(4.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(50),
+                                                color = if (isSuccess) SuccessGreenBg else Color(0xFFFEE2E2)
+                                            ) {
+                                                Text(
+                                                    text = if (isSuccess) "Synced" else "Failed",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (isSuccess) SuccessGreenText else Color(0xFFDC2626),
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -760,5 +832,21 @@ fun HomeScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+}
+
+private fun formatFriendlySyncTime(timestamp: Long): String {
+    val now = Calendar.getInstance()
+    val time = Calendar.getInstance().apply { timeInMillis = timestamp }
+    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+    val dateFormat = SimpleDateFormat("MMM dd", Locale.getDefault())
+
+    val isSameYear = now.get(Calendar.YEAR) == time.get(Calendar.YEAR)
+    val dayDiff = now.get(Calendar.DAY_OF_YEAR) - time.get(Calendar.DAY_OF_YEAR)
+
+    return when {
+        isSameYear && dayDiff == 0 -> "Today at ${timeFormat.format(Date(timestamp))}"
+        isSameYear && dayDiff == 1 -> "Yesterday at ${timeFormat.format(Date(timestamp))}"
+        else -> "${dateFormat.format(Date(timestamp))}, ${timeFormat.format(Date(timestamp))}"
     }
 }

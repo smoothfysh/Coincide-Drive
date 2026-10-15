@@ -67,7 +67,7 @@ fun CoincideNavGraph(
 
     // Live observation of Active Pairs, Preferences, and Audit Logs
     val activePairs by database.syncPairDao().getActivePairsFlow().collectAsState(initial = emptyList())
-    val recentLogs by database.syncLogDao().getRecentLogsFlow(5).collectAsState(initial = emptyList())
+    val recentLogs by database.syncLogDao().getRecentLogsFlow(25).collectAsState(initial = emptyList())
     val preferences by preferencesManager.syncPreferencesFlow.collectAsState(initial = SyncPreferences())
 
     // Live observation of WorkManager background sync workers to prevent stuck "Syncing..." UI state
@@ -365,7 +365,7 @@ fun CoincideNavGraph(
                 onReindexDiagnostics = {
                     Toast.makeText(
                         context,
-                        "Re-indexing local SAF & remote Drive hashes...",
+                        "Re-scanning files...",
                         Toast.LENGTH_SHORT
                     ).show()
                 },

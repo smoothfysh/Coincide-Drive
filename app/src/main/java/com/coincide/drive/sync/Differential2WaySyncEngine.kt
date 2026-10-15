@@ -87,7 +87,7 @@ class Differential2WaySyncEngine(
 
         try {
             currentCoroutineContext().ensureActive()
-            onProgress?.invoke(SyncProgress(currentAction = "Scanning remote Google Drive files..."))
+            onProgress?.invoke(SyncProgress(currentAction = "Checking Google Drive files..."))
 
             val treeUri = Uri.parse(syncPair.localTreeUri)
 
@@ -101,14 +101,14 @@ class Differential2WaySyncEngine(
             )
 
             currentCoroutineContext().ensureActive()
-            onProgress?.invoke(SyncProgress(currentAction = "Scanning local SAF storage..."))
+            onProgress?.invoke(SyncProgress(currentAction = "Checking files on your phone..."))
 
             // 2. Scan Local SAF files recursively
             val localFilesList = localSafManager.listAllFiles(treeUri, computeHashes = true)
             val localFilesMap = localFilesList.associateBy { it.relativePath }
 
             currentCoroutineContext().ensureActive()
-            onProgress?.invoke(SyncProgress(currentAction = "Querying database baseline snapshot..."))
+            onProgress?.invoke(SyncProgress(currentAction = "Comparing files..."))
 
             // 3. Load baseline metadata from Room
             val baselines = fileMetadataDao.getByPairId(syncPair.id)

@@ -148,7 +148,7 @@ fun FolderBrowserScreen(
                             color = Color(0xFF101D38)
                         )
                         Text(
-                            text = "Step 2 of 3: Sync Pair Setup",
+                            text = "Step 2 of 3: Choose Folders to Sync",
                             style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF1A68D9)
                         )
@@ -600,12 +600,12 @@ private fun LocalFolderPickerCard(
                 Spacer(modifier = Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Local Device Directory (SAF)",
+                        text = "Folder on Your Phone",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Public storage accessible by external editors",
+                        text = "Choose a folder on your phone (e.g. in Documents or your Obsidian vault)",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -626,7 +626,7 @@ private fun LocalFolderPickerCard(
                         .padding(14.dp)
                 ) {
                     Text(
-                        text = "Target Directory Path",
+                        text = "Selected Phone Folder",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.SemiBold
@@ -655,13 +655,13 @@ private fun LocalFolderPickerCard(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Info,
-                        contentDescription = "SAF Notice",
+                        contentDescription = "Folder notice",
                         tint = MaterialTheme.colorScheme.outline,
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Grants persistable URI access for Obsidian, Logseq & text editors",
+                        text = "Other apps on your phone (like Obsidian or Notes) can open and edit these files",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.outline
                     )
@@ -679,7 +679,7 @@ private fun LocalFolderPickerCard(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = if (localTreeUri != null) "Change" else "Select")
+                    Text(text = if (localTreeUri != null) "Change Folder" else "Choose Folder")
                 }
             }
         }

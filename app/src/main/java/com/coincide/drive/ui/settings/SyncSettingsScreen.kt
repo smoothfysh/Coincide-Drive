@@ -135,7 +135,7 @@ fun SyncSettingsScreen(
                             color = Color(0xFF101D38)
                         )
                         Text(
-                            text = "Step 3 of 3: Background Engine",
+                            text = "Step 3 of 3: Sync Settings",
                             style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF1A68D9)
                         )
@@ -183,7 +183,7 @@ fun SyncSettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Apply & Schedule WorkManager",
+                            text = "Save & Start Syncing",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -219,6 +219,12 @@ fun SyncSettingsScreen(
             PeriodicFrequencyCard(
                 selectedInterval = uiState.selectedInterval,
                 onSelectInterval = onIntervalSelected
+            )
+
+            // 4. Sync Cache & Storage
+            RoomDatabaseDiagnosticsCard(
+                uiState = uiState,
+                onReindex = onReindexDiagnostics
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -370,7 +376,7 @@ private fun WorkManagerConstraintsCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                text = "WorkManager Execution Constraints",
+                text = "Sync Conditions",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
@@ -378,8 +384,8 @@ private fun WorkManagerConstraintsCard(
             // Constraint: Wi-Fi Only
             ConstraintSwitchRow(
                 icon = Icons.Default.Wifi,
-                title = "Wi-Fi Only (UNMETERED)",
-                subtitle = "Restricts background sync to unmetered Wi-Fi connections",
+                title = "Only on Wi-Fi",
+                subtitle = "Sync only when connected to a Wi-Fi network",
                 checked = uiState.wifiOnly,
                 onCheckedChange = { checked ->
                     onWifiOnlyChanged(checked)
@@ -390,8 +396,8 @@ private fun WorkManagerConstraintsCard(
             // Constraint: Allow Mobile Data
             ConstraintSwitchRow(
                 icon = Icons.Default.SignalCellularAlt,
-                title = "Allow Mobile Data",
-                subtitle = "Allows cellular sync when Wi-Fi is unavailable",
+                title = "Use Mobile Data",
+                subtitle = "Allow syncing using your cellular data connection",
                 checked = uiState.allowMobileData,
                 enabled = !uiState.wifiOnly,
                 onCheckedChange = onAllowMobileDataChanged
@@ -400,8 +406,8 @@ private fun WorkManagerConstraintsCard(
             // Constraint: Block Roaming
             ConstraintSwitchRow(
                 icon = Icons.Default.DataSaverOn,
-                title = "Block Roaming Data (NOT_ROAMING)",
-                subtitle = "Prevents expensive cellular data usage while roaming",
+                title = "Don't sync while roaming",
+                subtitle = "Prevents data usage while traveling internationally",
                 checked = uiState.blockRoaming,
                 onCheckedChange = onBlockRoamingChanged
             )
@@ -409,8 +415,8 @@ private fun WorkManagerConstraintsCard(
             // Constraint: Only When Charging
             ConstraintSwitchRow(
                 icon = Icons.Default.BatteryChargingFull,
-                title = "Only When Charging (requiresCharging)",
-                subtitle = "Conserves battery by syncing only when connected to power",
+                title = "Only while charging",
+                subtitle = "Saves battery by syncing only when plugged into power",
                 checked = uiState.onlyWhenCharging,
                 onCheckedChange = onOnlyWhenChargingChanged
             )
@@ -505,7 +511,7 @@ private fun PeriodicFrequencyCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Sync Frequency Interval",
+                    text = "Sync Frequency",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -514,7 +520,7 @@ private fun PeriodicFrequencyCard(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Minimum periodic interval supported by Android WorkManager is 15 minutes.",
+                text = "Files are checked automatically in the background to keep everything in sync.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -591,7 +597,7 @@ private fun RoomDatabaseDiagnosticsCard(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Room SQLite Baseline Diagnostics",
+                    text = "Sync Cache & Storage",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -613,12 +619,12 @@ private fun RoomDatabaseDiagnosticsCard(
                 ) {
                     Column {
                         Text(
-                            text = "${uiState.indexedFilesCount} Files Tracked",
+                            text = "${uiState.indexedFilesCount} Files Monitored",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Differential MD5 hashes verified & cached",
+                            text = "File states cached locally to sync only changed files",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -630,12 +636,12 @@ private fun RoomDatabaseDiagnosticsCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.CleaningServices,
-                            contentDescription = "Re-index",
+                            contentDescription = "Re-scan",
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "Re-index",
+                            text = "Re-scan",
                             style = MaterialTheme.typography.labelMedium
                         )
                     }

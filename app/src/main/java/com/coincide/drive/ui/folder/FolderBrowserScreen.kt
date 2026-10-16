@@ -104,6 +104,8 @@ data class FolderBrowserUiState(
 @Composable
 fun FolderBrowserScreen(
     uiState: FolderBrowserUiState = FolderBrowserUiState(),
+    subtitleText: String = "Step 2 of 3: Choose Folders to Sync",
+    continueButtonText: String = "Save & Continue to Settings",
     onRemoteFolderSelected: (folderId: String, folderName: String) -> Unit = { _, _ -> },
     onLocalFolderSelected: (uri: Uri, displayPath: String) -> Unit = { _, _ -> },
     onRefreshFolders: () -> Unit = {},
@@ -148,7 +150,7 @@ fun FolderBrowserScreen(
                             color = Color(0xFF101D38)
                         )
                         Text(
-                            text = "Step 2 of 3: Choose Folders to Sync",
+                            text = subtitleText,
                             style = MaterialTheme.typography.labelSmall,
                             color = Color(0xFF1A68D9)
                         )
@@ -191,7 +193,7 @@ fun FolderBrowserScreen(
                         )
                     ) {
                         Text(
-                            text = "Save & Continue to Settings",
+                            text = continueButtonText,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold
                         )

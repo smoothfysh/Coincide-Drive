@@ -10,8 +10,14 @@ data class SyncPreferences(
     val onlyWhenCharging: Boolean = false,
     val syncIntervalMinutes: Long = 60L,
     val lastSyncTimestamp: Long = 0L,
-    val isSyncInProgress: Boolean = false
+    val isSyncInProgress: Boolean = false,
+    val isProUnlocked: Boolean = false,
+    val unlockedEmail: String = "",
+    val unlockedCode: String = ""
 ) {
+    val maxSyncPairs: Int
+        get() = if (isProUnlocked) LicenseManager.PRO_MAX_SYNC_PAIRS else LicenseManager.FREE_MAX_SYNC_PAIRS
+
     companion object {
         const val INTERVAL_15_MIN = 15L
         const val INTERVAL_30_MIN = 30L

@@ -24,8 +24,23 @@ import com.coincide.drive.drive.DriveRepository
 import com.coincide.drive.drive.GoogleAuthManager
 import com.coincide.drive.sync.Differential2WaySyncEngine
 import com.coincide.drive.sync.LocalSafManager
+import com.coincide.drive.sync.SyncProgress
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+
+/**
+ * Live progress snapshot for the currently syncing folder pair.
+ */
+data class ActivePairSyncProgress(
+    val pairId: String,
+    val pairName: String,
+    val processedCount: Int = 0,
+    val totalCount: Int = 0,
+    val currentAction: String = ""
+)
 
 /**
  * Result data class produced by a sync execution cycle.
@@ -64,6 +79,14 @@ class DriveSyncWorker(
         Log.i(TAG, "Starting DriveSyncWorker execution (id=$id)")
         val preferences = preferencesManager.getSyncPreferences()
 
+        val activePairs = database.syncPairDao().getActivePairs().take(preferences.maxSyncPairs)
+        if (activePairs.isEmpty()) {
+            Log.i(TAG, "No active sync pairs configured. Completed successfully.")
+            _liveProgressFlow.value = null
+            preferencesManager.setSyncInProgress(false)
+            return@withContext Result.success()
+        }
+
         // Display foreground notification (required on Android 14+ when running as dataSync foreground service)
         try {
             setForeground(createForegroundInfo("Preparing background sync..."))
@@ -80,22 +103,31 @@ class DriveSyncWorker(
                 return@withContext Result.retry()
             }
 
-            val activePairs = database.syncPairDao().getActivePairs()
-            if (activePairs.isEmpty()) {
-                Log.i(TAG, "No active sync pairs configured. Completed successfully.")
-                return@withContext Result.success()
-            }
-
             var allPairsSucceeded = true
 
             for (pair in activePairs) {
                 if (isStopped) {
                     Log.w(TAG, "Worker execution was cancelled or stopped.")
-                    return@withContext Result.retry()
+                    return@withContext Result.success()
+                }
+
+                // Re-verify that this folder pair hasn't been toggled off or deleted while earlier pairs were syncing
+                val latestPairState = database.syncPairDao().getPairById(pair.id)
+                if (latestPairState == null || !latestPairState.isActive) {
+                    Log.i(TAG, "Skipping pair ${pair.remoteFolderName} as it was paused or unlinked.")
+                    continue
                 }
 
                 val startTime = System.currentTimeMillis()
                 val progressText = "Syncing ${pair.remoteFolderName}..."
+
+                _liveProgressFlow.value = ActivePairSyncProgress(
+                    pairId = pair.id,
+                    pairName = pair.remoteFolderName,
+                    processedCount = 0,
+                    totalCount = 0,
+                    currentAction = progressText
+                )
 
                 try {
                     setForeground(createForegroundInfo(progressText))
@@ -107,14 +139,28 @@ class DriveSyncWorker(
                     workDataOf(
                         KEY_CURRENT_PAIR_ID to pair.id,
                         KEY_CURRENT_PAIR_NAME to pair.remoteFolderName,
+                        KEY_PROCESSED_COUNT to 0,
+                        KEY_TOTAL_COUNT to 0,
                         KEY_STATUS to "IN_PROGRESS"
                     )
                 )
 
                 // Invoke the sync engine
-                val result = runSyncForPair(pair) { detail ->
+                val result = runSyncForPair(pair) { progress ->
+                    _liveProgressFlow.value = ActivePairSyncProgress(
+                        pairId = pair.id,
+                        pairName = pair.remoteFolderName,
+                        processedCount = progress.processedCount,
+                        totalCount = progress.totalCount,
+                        currentAction = progress.currentAction
+                    )
                     try {
-                        updateNotification("${pair.remoteFolderName}: $detail")
+                        val countTag = if (progress.totalCount > 0) {
+                            "(${progress.processedCount}/${progress.totalCount}) "
+                        } else {
+                            ""
+                        }
+                        updateNotification("${pair.remoteFolderName}: $countTag${progress.currentAction}")
                     } catch (_: Exception) {}
                 }
 
@@ -150,15 +196,14 @@ class DriveSyncWorker(
                 )
             )
 
-            if (allPairsSucceeded) {
-                Result.success()
-            } else {
-                Result.retry()
-            }
+            // Return success after recording outcomes in SyncLogEntity so OneTimeWorkRequests
+            // do not stay stuck in ENQUEUED backoff retry state.
+            Result.success()
         } catch (e: Exception) {
             Log.e(TAG, "Sync run encountered unhandled exception: ${e.message}", e)
             Result.failure()
         } finally {
+            _liveProgressFlow.value = null
             preferencesManager.setSyncInProgress(false)
             Log.i(TAG, "DriveSyncWorker finished.")
         }
@@ -166,11 +211,13 @@ class DriveSyncWorker(
 
     private suspend fun runSyncForPair(
         pair: SyncPairEntity,
-        onProgress: (String) -> Unit
+        onProgress: (SyncProgress) -> Unit
     ): SyncResult {
         val delegate = syncEngineDelegate
         if (delegate != null) {
-            return delegate.executeSync(pair, onProgress)
+            return delegate.executeSync(pair) { action ->
+                onProgress(SyncProgress(currentAction = action))
+            }
         }
 
         return try {
@@ -202,7 +249,7 @@ class DriveSyncWorker(
             )
 
             val engineResult = engine.sync(pair) { progress ->
-                onProgress(progress.currentAction)
+                onProgress(progress)
             }
 
             SyncResult(
@@ -329,8 +376,17 @@ class DriveSyncWorker(
 
         const val KEY_CURRENT_PAIR_ID = "current_pair_id"
         const val KEY_CURRENT_PAIR_NAME = "current_pair_name"
+        const val KEY_PROCESSED_COUNT = "processed_count"
+        const val KEY_TOTAL_COUNT = "total_count"
         const val KEY_STATUS = "sync_status"
         const val KEY_TIMESTAMP = "sync_timestamp"
+
+        private val _liveProgressFlow = MutableStateFlow<ActivePairSyncProgress?>(null)
+        val liveProgressFlow: StateFlow<ActivePairSyncProgress?> = _liveProgressFlow.asStateFlow()
+
+        fun clearLiveProgress() {
+            _liveProgressFlow.value = null
+        }
 
         @Volatile
         var syncEngineDelegate: SyncEngineDelegate? = null

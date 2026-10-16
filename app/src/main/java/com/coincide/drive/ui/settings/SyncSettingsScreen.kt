@@ -30,6 +30,8 @@ import androidx.compose.material.icons.filled.BatteryChargingFull
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CleaningServices
 import androidx.compose.material.icons.filled.DataSaverOn
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.NetworkCheck
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
@@ -37,6 +39,7 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -58,6 +61,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.rotate
@@ -66,6 +72,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.coincide.drive.ui.home.UnlockProDialog
 import com.coincide.drive.ui.theme.CoincideDriveTheme
 import com.coincide.drive.ui.theme.DriveGoogleBlue
 import com.coincide.drive.ui.theme.DriveSuccessGreen
@@ -103,7 +110,11 @@ data class SyncSettingsUiState(
     // Room SQLite diagnostics
     val indexedFilesCount: Int = 0,
     val verifiedHashesCount: Int = 0,
-    val databaseSizeBytes: Long = 0L
+    val databaseSizeBytes: Long = 0L,
+    // License / Pro Unlock status
+    val isProUnlocked: Boolean = false,
+    val unlockedEmail: String = "",
+    val defaultAccountEmail: String = ""
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -117,10 +128,27 @@ fun SyncSettingsScreen(
     onOnlyWhenChargingChanged: (Boolean) -> Unit = {},
     onIntervalSelected: (SyncInterval) -> Unit = {},
     onReindexDiagnostics: () -> Unit = {},
+    onRedeemUnlockCode: (email: String, code: String) -> Boolean = { _, _ -> false },
     onApplySchedule: () -> Unit = {},
     onBack: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    var showUnlockDialog by remember { mutableStateOf(false) }
+
+    if (showUnlockDialog) {
+        UnlockProDialog(
+            initialEmail = uiState.unlockedEmail.ifBlank { uiState.defaultAccountEmail },
+            onDismiss = { showUnlockDialog = false },
+            onVerifyAndUnlock = { email, code ->
+                val unlocked = onRedeemUnlockCode(email, code)
+                if (unlocked) {
+                    showUnlockDialog = false
+                }
+                unlocked
+            }
+        )
+    }
+
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = Color(0xFFF4F8FC),
@@ -206,7 +234,14 @@ fun SyncSettingsScreen(
                 onSyncNow = onSyncNowClicked
             )
 
-            // 2. WorkManager Constraint Toggles
+            // 2. Folder Sync Limit / Cadence-X Unlock Card
+            FolderSyncLimitCard(
+                isProUnlocked = uiState.isProUnlocked,
+                unlockedEmail = uiState.unlockedEmail,
+                onOpenUnlockDialog = { showUnlockDialog = true }
+            )
+
+            // 3. WorkManager Constraint Toggles
             WorkManagerConstraintsCard(
                 uiState = uiState,
                 onWifiOnlyChanged = onWifiOnlyChanged,
@@ -215,13 +250,13 @@ fun SyncSettingsScreen(
                 onOnlyWhenChargingChanged = onOnlyWhenChargingChanged
             )
 
-            // 3. Periodic Sync Interval Selector
+            // 4. Periodic Sync Interval Selector
             PeriodicFrequencyCard(
                 selectedInterval = uiState.selectedInterval,
                 onSelectInterval = onIntervalSelected
             )
 
-            // 4. Sync Cache & Storage
+            // 5. Sync Cache & Storage
             RoomDatabaseDiagnosticsCard(
                 uiState = uiState,
                 onReindex = onReindexDiagnostics
@@ -644,6 +679,121 @@ private fun RoomDatabaseDiagnosticsCard(
                             text = "Re-scan",
                             style = MaterialTheme.typography.labelMedium
                         )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FolderSyncLimitCard(
+    isProUnlocked: Boolean,
+    unlockedEmail: String,
+    onOpenUnlockDialog: () -> Unit
+) {
+    Card(
+        shape = TonalCardShape,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
+        ),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = if (isProUnlocked) Icons.Default.Verified else Icons.Default.Key,
+                        contentDescription = null,
+                        tint = if (isProUnlocked) DriveSuccessGreen else MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Folder Sync Limit",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Surface(
+                    shape = PillShape,
+                    color = if (isProUnlocked) DriveSuccessGreen.copy(alpha = 0.15f) else DriveGoogleBlue.copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = if (isProUnlocked) "5 Folders Unlocked" else "1 Folder Plan",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isProUnlocked) DriveSuccessGreen else DriveGoogleBlue,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surface,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (isProUnlocked) {
+                                "Up to 5 Folders Enabled"
+                            } else {
+                                "Unlock up to 5 Synced Folders"
+                            },
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = if (isProUnlocked) {
+                                if (unlockedEmail.isNotBlank()) {
+                                    "Licensed to $unlockedEmail"
+                                } else {
+                                    "Cadence-X unlock code active"
+                                }
+                            } else {
+                                "Have a CADX-YYYY-YYYY code? Redeem it to sync up to 5 folders."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+
+                    if (!isProUnlocked) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        OutlinedButton(
+                            onClick = onOpenUnlockDialog,
+                            shape = PillShape
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.LockOpen,
+                                contentDescription = "Redeem Code",
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Enter Code",
+                                style = MaterialTheme.typography.labelMedium
+                            )
+                        }
                     }
                 }
             }

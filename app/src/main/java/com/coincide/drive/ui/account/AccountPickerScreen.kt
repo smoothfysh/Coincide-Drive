@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
@@ -36,6 +37,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -95,8 +97,10 @@ data class AccountPickerUiState(
 @Composable
 fun AccountPickerScreen(
     uiState: AccountPickerUiState = AccountPickerUiState(),
+    stepSubtitle: String = "Step 1 of 3: Connect Account",
     onSwitchAccount: () -> Unit = {},
     onContinue: () -> Unit = {},
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     Scaffold(
@@ -113,6 +117,17 @@ fun AccountPickerScreen(
                             color = Color(0xFF101D38)
                         )
                     )
+                },
+                navigationIcon = {
+                    if (onBack != null) {
+                        androidx.compose.material3.IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color(0xFF101D38)
+                            )
+                        }
+                    }
                 },
                 actions = {
                     Surface(
@@ -193,7 +208,7 @@ fun AccountPickerScreen(
         ) {
             // Step Subtitle
             Text(
-                text = "Step 1 of 3: Connect Account",
+                text = stepSubtitle,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 fontWeight = FontWeight.SemiBold

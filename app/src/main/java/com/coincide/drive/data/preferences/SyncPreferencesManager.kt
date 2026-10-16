@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
@@ -29,6 +30,9 @@ class SyncPreferencesManager(private val context: Context) {
         val KEY_SYNC_INTERVAL_MINUTES = longPreferencesKey("sync_interval_minutes")
         val KEY_LAST_SYNC_TIMESTAMP = longPreferencesKey("last_sync_timestamp")
         val KEY_IS_SYNC_IN_PROGRESS = booleanPreferencesKey("is_sync_in_progress")
+        val KEY_IS_PRO_UNLOCKED = booleanPreferencesKey("is_pro_unlocked")
+        val KEY_UNLOCKED_EMAIL = stringPreferencesKey("unlocked_email")
+        val KEY_UNLOCKED_CODE = stringPreferencesKey("unlocked_code")
     }
 
     val syncPreferencesFlow: Flow<SyncPreferences> = context.dataStore.data
@@ -47,7 +51,10 @@ class SyncPreferencesManager(private val context: Context) {
                 onlyWhenCharging = preferences[PreferencesKeys.KEY_ONLY_WHEN_CHARGING] ?: false,
                 syncIntervalMinutes = preferences[PreferencesKeys.KEY_SYNC_INTERVAL_MINUTES] ?: 60L,
                 lastSyncTimestamp = preferences[PreferencesKeys.KEY_LAST_SYNC_TIMESTAMP] ?: 0L,
-                isSyncInProgress = preferences[PreferencesKeys.KEY_IS_SYNC_IN_PROGRESS] ?: false
+                isSyncInProgress = preferences[PreferencesKeys.KEY_IS_SYNC_IN_PROGRESS] ?: false,
+                isProUnlocked = preferences[PreferencesKeys.KEY_IS_PRO_UNLOCKED] ?: false,
+                unlockedEmail = preferences[PreferencesKeys.KEY_UNLOCKED_EMAIL] ?: "",
+                unlockedCode = preferences[PreferencesKeys.KEY_UNLOCKED_CODE] ?: ""
             )
         }
 
@@ -92,6 +99,14 @@ class SyncPreferencesManager(private val context: Context) {
     suspend fun setSyncInProgress(inProgress: Boolean) {
         context.dataStore.edit { preferences ->
             preferences[PreferencesKeys.KEY_IS_SYNC_IN_PROGRESS] = inProgress
+        }
+    }
+
+    suspend fun setProUnlocked(unlocked: Boolean, email: String, code: String) {
+        context.dataStore.edit { preferences ->
+            preferences[PreferencesKeys.KEY_IS_PRO_UNLOCKED] = unlocked
+            preferences[PreferencesKeys.KEY_UNLOCKED_EMAIL] = email
+            preferences[PreferencesKeys.KEY_UNLOCKED_CODE] = code
         }
     }
 

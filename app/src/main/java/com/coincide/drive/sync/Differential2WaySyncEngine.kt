@@ -504,12 +504,35 @@ class Differential2WaySyncEngine(
             localSafManager.createOrGetFile(treeUri, relativePath, remote.mimeType)
         ) { "Failed to create local SAF file for $relativePath" }
 
-        val outputStream = checkNotNull(
-            localSafManager.openOutputStream(docFile.uri)
-        ) { "Failed to open OutputStream for ${docFile.uri}" }
+        if (remote.size == 0L && !remote.mimeType.startsWith("application/vnd.google-apps")) {
+            // 0-byte file: truncate/create empty local file directly without making an HTTP Range request
+            val outputStream = checkNotNull(
+                localSafManager.openOutputStream(docFile.uri)
+            ) { "Failed to open OutputStream for ${docFile.uri}" }
+            outputStream.use { it.flush() }
+        } else {
+            var attempt = 0
+            while (true) {
+                try {
+                    val outputStream = checkNotNull(
+                        localSafManager.openOutputStream(docFile.uri)
+                    ) { "Failed to open OutputStream for ${docFile.uri}" }
 
-        outputStream.use { out ->
-            driveRepository.downloadFile(remote.id, out)
+                    outputStream.use { out ->
+                        driveRepository.downloadFile(remote.id, out)
+                    }
+                    break
+                } catch (e: Exception) {
+                    attempt++
+                    val isTimeout = e is java.net.SocketTimeoutException ||
+                        e is java.net.SocketException ||
+                        e.message?.contains("timeout", ignoreCase = true) == true
+                    if (!isTimeout || attempt >= 3) {
+                        throw e
+                    }
+                    kotlinx.coroutines.delay(1_000L * attempt)
+                }
+            }
         }
 
         val computedMd5 = localSafManager.calculateMd5(docFile.uri) ?: remote.md5Checksum

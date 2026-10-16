@@ -85,7 +85,11 @@ class KeepBothConflictResolver(
         ) { "Cannot open OutputStream for conflict file ${conflictDocFile.uri}" }
 
         conflictOutputStream.use { out ->
-            driveRepository.downloadFile(remoteItem.id, out)
+            if (remoteItem.size == 0L && !remoteItem.mimeType.startsWith("application/vnd.google-apps")) {
+                out.flush()
+            } else {
+                driveRepository.downloadFile(remoteItem.id, out)
+            }
         }
 
         // 3. Compute MD5 for downloaded conflict file

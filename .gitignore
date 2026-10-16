@@ -56,3 +56,8 @@ desktop.ini
 # Secrets & keystores
 *.jks
 *.keystore
+
+# Admin License Key Generator (never commit to GitHub)
+tools/
+license-generator.html
+

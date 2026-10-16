@@ -77,6 +77,60 @@ class LocalSafManager(private val context: Context) {
     }
 
     /**
+     * Normalizes a filename/directory name to match Android ExternalStorageProvider's FAT filename rules
+     * (trims trailing spaces/dots, replaces illegal characters with '_').
+     */
+    fun sanitizeFatName(name: String): String {
+        if (name.isEmpty() || name == "." || name == "..") return "_"
+        val sb = StringBuilder(name.length)
+        for (c in name) {
+            val isIllegal = c.code in 0x00..0x1f ||
+                c.code == 0x7f ||
+                c == '"' || c == '*' || c == '/' || c == ':' ||
+                c == '<' || c == '>' || c == '?' || c == '\\' || c == '|'
+            sb.append(if (isIllegal) '_' else c)
+        }
+        var res = sb.toString().trimEnd(' ', '.')
+        if (res.isEmpty()) res = "_"
+        return res
+    }
+
+    /**
+     * Finds a child [DocumentFile] by name with exact match first, falling back to
+     * case-insensitive and FAT-sanitized matching (needed because Android shared storage
+     * is case-insensitive and strips trailing spaces/illegal FAT characters).
+     */
+    private fun findChild(
+        parent: DocumentFile,
+        targetName: String,
+        expectDirectory: Boolean? = null
+    ): DocumentFile? {
+        val exact = parent.findFile(targetName)
+        if (exact != null && (expectDirectory == null || exact.isDirectory == expectDirectory)) {
+            return exact
+        }
+
+        val sanitizedTarget = sanitizeFatName(targetName)
+        if (sanitizedTarget != targetName) {
+            val exactSanitized = parent.findFile(sanitizedTarget)
+            if (exactSanitized != null && (expectDirectory == null || exactSanitized.isDirectory == expectDirectory)) {
+                return exactSanitized
+            }
+        }
+
+        val trimmedTarget = targetName.trim()
+        val children = parent.listFiles()
+        return children.firstOrNull { child ->
+            if (expectDirectory != null && child.isDirectory != expectDirectory) return@firstOrNull false
+            val childName = child.name ?: return@firstOrNull false
+            childName.equals(targetName, ignoreCase = true) ||
+                childName.equals(sanitizedTarget, ignoreCase = true) ||
+                childName.trim().equals(trimmedTarget, ignoreCase = true) ||
+                sanitizeFatName(childName).equals(sanitizedTarget, ignoreCase = true)
+        }
+    }
+
+    /**
      * Resolves a [DocumentFile] corresponding to a relative path from the root tree.
      */
     suspend fun findFileByRelativePath(treeUri: Uri, relativePath: String): DocumentFile? =
@@ -88,11 +142,10 @@ class LocalSafManager(private val context: Context) {
             var current: DocumentFile = root
             for (i in 0 until segments.size - 1) {
                 val dirName = segments[i]
-                current = current.findFile(dirName) ?: return@withContext null
-                if (!current.isDirectory) return@withContext null
+                current = findChild(current, dirName, expectDirectory = true) ?: return@withContext null
             }
 
-            current.findFile(segments.last())
+            findChild(current, segments.last(), expectDirectory = false)
         }
 
     /**
@@ -110,20 +163,40 @@ class LocalSafManager(private val context: Context) {
         var current: DocumentFile = root
         for (i in 0 until segments.size - 1) {
             val dirName = segments[i]
-            var nextDir = current.findFile(dirName)
+            val sanitizedDirName = sanitizeFatName(dirName)
+            var nextDir = findChild(current, dirName, expectDirectory = true)
             if (nextDir == null) {
-                nextDir = current.createDirectory(dirName) ?: return@withContext null
+                nextDir = current.createDirectory(dirName)
+                    ?: (if (sanitizedDirName != dirName) current.createDirectory(sanitizedDirName) else null)
+                    ?: findChild(current, dirName, expectDirectory = true)
+                    ?: return@withContext null
             }
             current = nextDir
         }
 
         val fileName = segments.last()
-        val existing = current.findFile(fileName)
+        val existing = findChild(current, fileName, expectDirectory = false)
         if (existing != null && existing.isFile) {
-            existing
-        } else {
-            current.createFile(mimeType, fileName)
+            return@withContext existing
         }
+
+        val sanitizedFileName = sanitizeFatName(fileName)
+        // Use application/octet-stream for markdown or Google Workspace MIME types so Android SAF
+        // does not reject the MIME type or append an unwanted extension like .txt
+        val safeMimeType = if (
+            mimeType.isBlank() ||
+            mimeType.contains("markdown", ignoreCase = true) ||
+            mimeType.startsWith("application/vnd.google-apps")
+        ) {
+            "application/octet-stream"
+        } else {
+            mimeType
+        }
+
+        current.createFile(safeMimeType, fileName)
+            ?: (if (safeMimeType != "application/octet-stream") current.createFile("application/octet-stream", fileName) else null)
+            ?: (if (sanitizedFileName != fileName) current.createFile("application/octet-stream", sanitizedFileName) else null)
+            ?: findChild(current, fileName, expectDirectory = false)
     }
 
     /**

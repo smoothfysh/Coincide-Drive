@@ -47,14 +47,17 @@ class DifferentialSyncEngine(
         onProgress: ((String) -> Unit)?
     ): SyncResult {
         val authManager = GoogleAuthManager(context)
-        val credential = authManager.getCredential()
-            ?: return SyncResult(
-                filesUploaded = 0,
-                filesDownloaded = 0,
-                conflictsResolved = 0,
-                isSuccess = false,
-                errorMessage = "Google Account not authenticated. Please sign in via Account Picker."
-            )
+        val credential = if (pair.accountEmail.isNotBlank()) {
+            authManager.getCredentialForEmail(pair.accountEmail)
+        } else {
+            authManager.getCredential()
+        } ?: return SyncResult(
+            filesUploaded = 0,
+            filesDownloaded = 0,
+            conflictsResolved = 0,
+            isSuccess = false,
+            errorMessage = "Google Account not authenticated. Please sign in via Account Picker."
+        )
 
         val driveRepository = DriveRepository(credential)
         val localSafManager = LocalSafManager(context)

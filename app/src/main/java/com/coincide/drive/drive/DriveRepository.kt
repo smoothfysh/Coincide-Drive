@@ -1,15 +1,22 @@
 package com.coincide.drive.drive
 
-import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
+import com.google.api.client.googleapis.json.GoogleJsonResponseException
+import com.google.api.client.http.HttpRequestInitializer
+import com.google.api.client.http.HttpResponseException
 import com.google.api.client.http.InputStreamContent
+import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import com.google.api.services.drive.Drive
 import com.google.api.services.drive.model.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
+import java.net.SocketException
+import java.net.SocketTimeoutException
 
 /**
  * Representation of a remote Google Drive folder item.
@@ -60,16 +67,49 @@ class DriveRepository(
 ) {
 
     val driveService: Drive by lazy {
+        val timeoutInitializer = HttpRequestInitializer { request ->
+            credential.initialize(request)
+            request.connectTimeout = CONNECT_TIMEOUT_MS
+            request.readTimeout = READ_TIMEOUT_MS
+        }
         Drive.Builder(
             NetHttpTransport(),
             GsonFactory.getDefaultInstance(),
-            credential
+            timeoutInitializer
         ).setApplicationName(appName).build()
     }
 
     companion object {
         const val FOLDER_MIME_TYPE = "application/vnd.google-apps.folder"
         private const val DEFAULT_PAGE_SIZE = 100
+        private const val CONNECT_TIMEOUT_MS = 60_000
+        private const val READ_TIMEOUT_MS = 120_000
+        private const val MAX_RETRY_ATTEMPTS = 3
+    }
+
+    /**
+     * Retries transient network / socket timeout errors with exponential backoff.
+     */
+    private suspend fun <T> executeWithRetry(block: suspend () -> T): T {
+        var attempt = 0
+        var delayMs = 1_000L
+        while (true) {
+            try {
+                return block()
+            } catch (e: Exception) {
+                attempt++
+                val isTransient = e is SocketTimeoutException ||
+                    e is SocketException ||
+                    (e is HttpResponseException && e.statusCode in listOf(429, 500, 502, 503, 504)) ||
+                    (e is IOException && e !is HttpResponseException &&
+                        e.message?.contains("timeout", ignoreCase = true) == true)
+                if (!isTransient || attempt >= MAX_RETRY_ATTEMPTS) {
+                    throw e
+                }
+                delay(delayMs)
+                delayMs *= 2
+            }
+        }
     }
 
     /**
@@ -83,14 +123,16 @@ class DriveRepository(
         var pageToken: String? = null
 
         do {
-            val result = driveService.files().list()
-                .setQ(query)
-                .setSpaces("drive")
-                .setFields("nextPageToken, files(id, name, modifiedTime, parents)")
-                .setPageSize(DEFAULT_PAGE_SIZE)
-                .setOrderBy("name")
-                .setPageToken(pageToken)
-                .execute()
+            val result = executeWithRetry {
+                driveService.files().list()
+                    .setQ(query)
+                    .setSpaces("drive")
+                    .setFields("nextPageToken, files(id, name, modifiedTime, parents)")
+                    .setPageSize(DEFAULT_PAGE_SIZE)
+                    .setOrderBy("name")
+                    .setPageToken(pageToken)
+                    .execute()
+            }
 
             result.files?.forEach { file ->
                 folders.add(
@@ -117,14 +159,16 @@ class DriveRepository(
         var pageToken: String? = null
 
         do {
-            val result = driveService.files().list()
-                .setQ(query)
-                .setSpaces("drive")
-                .setFields("nextPageToken, files(id, name, md5Checksum, modifiedTime, size, mimeType, parents)")
-                .setPageSize(DEFAULT_PAGE_SIZE)
-                .setOrderBy("name")
-                .setPageToken(pageToken)
-                .execute()
+            val result = executeWithRetry {
+                driveService.files().list()
+                    .setQ(query)
+                    .setSpaces("drive")
+                    .setFields("nextPageToken, files(id, name, md5Checksum, modifiedTime, size, mimeType, parents)")
+                    .setPageSize(DEFAULT_PAGE_SIZE)
+                    .setOrderBy("name")
+                    .setPageToken(pageToken)
+                    .execute()
+            }
 
             result.files?.forEach { file ->
                 fileList.add(
@@ -150,9 +194,11 @@ class DriveRepository(
      */
     suspend fun getFileMetadata(fileId: String): DriveFileItem? = withContext(Dispatchers.IO) {
         try {
-            val file = driveService.files().get(fileId)
-                .setFields("id, name, md5Checksum, modifiedTime, size, mimeType, parents, trashed")
-                .execute()
+            val file = executeWithRetry {
+                driveService.files().get(fileId)
+                    .setFields("id, name, md5Checksum, modifiedTime, size, mimeType, parents, trashed")
+                    .execute()
+            }
 
             if (file.trashed == true) return@withContext null
 
@@ -172,11 +218,34 @@ class DriveRepository(
 
     /**
      * Downloads the file content from Google Drive and streams it directly to [outputStream].
+     * Gracefully handles 0-byte files where Google Drive returns HTTP 416 (Requested range not satisfiable).
      */
     suspend fun downloadFile(fileId: String, outputStream: OutputStream): Unit = withContext(Dispatchers.IO) {
-        driveService.files().get(fileId)
-            .executeMediaAndDownloadTo(outputStream)
-        outputStream.flush()
+        try {
+            driveService.files().get(fileId)
+                .executeMediaAndDownloadTo(outputStream)
+            outputStream.flush()
+        } catch (e: HttpResponseException) {
+            if (e.statusCode == 416 ||
+                e.message?.contains("416") == true ||
+                e.message?.contains("Requested range not satisfiable", ignoreCase = true) == true ||
+                e.message?.contains("requestedRangeNotSatisfiable", ignoreCase = true) == true
+            ) {
+                // 0-byte empty file on Google Drive: nothing to write, flush empty output stream
+                outputStream.flush()
+            } else {
+                throw e
+            }
+        } catch (e: IOException) {
+            if (e.message?.contains("416") == true ||
+                e.message?.contains("Requested range not satisfiable", ignoreCase = true) == true ||
+                e.message?.contains("requestedRangeNotSatisfiable", ignoreCase = true) == true
+            ) {
+                outputStream.flush()
+            } else {
+                throw e
+            }
+        }
     }
 
     /**
